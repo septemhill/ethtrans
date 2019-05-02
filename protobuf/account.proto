@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package pb;
+
+import "google/api/annotations.proto";
+
+service Account {
+    rpc GetAccountTotalTxns(AccountName) returns (TransactionCount) {
+        option (google.api.http) = {
+            post: "/v1/account/txnscnt"
+            body: "*"
+        };
+    }
+
+    rpc GetAccountTxns(AccountName) returns (Transactions) {
+        option (google.api.http) = {
+            post: "/v1/account/txns"
+        };
+    }
+}
+
+message AccountName {
+    string name = 1;
+}
+
+message TransactionCount {
+    int64 totalTxns = 1;
+}
+
+message Transactions {
+    repeated Transaction transactions = 1; 
+}
+
+message Transaction {
+}
