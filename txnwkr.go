@@ -1,19 +1,27 @@
 package main
 
 import (
-	"github.com/septemhill/ethacctdb/db"
-	"github.com/septemhill/ethacctdb/types"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
+
+	"github.com/go-pg/pg/orm"
+	"github.com/septemhill/ethacctdb/db"
+	"github.com/septemhill/ethacctdb/types"
 )
 
 type TxnWorker struct {
-	wg        sync.WaitGroup
-	next      int64
-	done      chan struct{}
-	cli       *EtherRPCClient
-	workerCnt int
+	wg         sync.WaitGroup
+	done       chan struct{}
+	cli        *EtherRPCClient
+	workerCnt  int
+	lastBlocks []int64
 }
 
 func (tw *TxnWorker) getTransactions(blockNumber int64, tc chan<- types.Transaction) bool {
@@ -35,7 +43,7 @@ func (tw *TxnWorker) getTransactions(blockNumber int64, tc chan<- types.Transact
 }
 
 func (tw *TxnWorker) Start() {
-	worker := func(i int) <-chan types.Transaction {
+	worker := func(i int64) <-chan types.Transaction {
 		tc := make(chan types.Transaction)
 		tw.wg.Add(1)
 
@@ -43,10 +51,11 @@ func (tw *TxnWorker) Start() {
 			defer tw.wg.Done()
 			for {
 				if ok := tw.getTransactions(int64(i), tc); ok {
-					i += tw.workerCnt
+					i += int64(tw.workerCnt)
 				}
 				select {
 				case <-done:
+					tw.lastBlocks = append(tw.lastBlocks, int64(i))
 					close(tc)
 					return
 				default:
@@ -86,8 +95,11 @@ func (tw *TxnWorker) Start() {
 
 	wc := make([]<-chan types.Transaction, 0)
 	for i := 0; i < tw.workerCnt; i++ {
-		wc = append(wc, worker(i))
+		wc = append(wc, worker(tw.lastBlocks[i]))
+		//wc = append(wc, worker(i))
 	}
+
+	tw.lastBlocks = make([]int64, 0)
 
 	saveTxns := func(tc <-chan types.Transaction) {
 		tw.wg.Add(1)
@@ -104,19 +116,69 @@ func (tw *TxnWorker) Start() {
 	go saveTxns(merge(wc...))
 }
 
+func (tw *TxnWorker) processedRecord() {
+	tpr := &types.TransactionProcessRecord{
+		Workers:    tw.workerCnt,
+		LastBlocks: tw.lastBlocks,
+	}
+
+	buff := bytes.NewBuffer(nil)
+	enc := json.NewEncoder(buff)
+	enc.Encode(tpr)
+
+	ioutil.WriteFile("processedData.json", buff.Bytes(), 0664)
+}
+
+func (tw *TxnWorker) loadProcessedRecord() bool {
+	fd, err := os.OpenFile("processedData.json", syscall.O_RDONLY, 0664)
+
+	if err != nil {
+		return false
+	}
+
+	defer fd.Close()
+
+	b, _ := ioutil.ReadAll(fd)
+	tpr := types.TransactionProcessRecord{}
+	buff := bytes.NewBuffer(b)
+	dec := json.NewDecoder(buff)
+	dec.Decode(&tpr)
+
+	tw.workerCnt = tpr.Workers
+	tw.lastBlocks = tpr.LastBlocks
+
+	return false
+}
+
 func (tw *TxnWorker) Stop() {
 	close(tw.done)
 	tw.wg.Wait()
+	tw.processedRecord()
 	tw.cli.Close()
 }
 
+func createTxnTable() {
+	db := db.GetRDBInstance()
+
+	if err := db.CreateTable(&types.Transaction{}, &orm.CreateTableOptions{}); err == nil {
+		fmt.Println("create create successful")
+	}
+}
+
 func NewTxnWorker(startBlock int64, url string, workerCnt int) *TxnWorker {
+	createTxnTable()
+
 	tw := &TxnWorker{
 		//url:  url,
 		workerCnt: workerCnt,
-		next:      startBlock,
 		done:      make(chan struct{}),
 		cli:       NewEtherRPCClient(url),
+	}
+
+	if !tw.loadProcessedRecord() {
+		for i := 0; i < tw.workerCnt; i++ {
+			tw.lastBlocks = append(tw.lastBlocks, int64(i))
+		}
 	}
 
 	return tw

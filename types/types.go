@@ -64,3 +64,9 @@ type Block struct {
 	Uncles           []interface{} `json:"uncles"`
 	Validator        string        `json:"validator"`
 }
+
+//TransactionProcessRecord records last block each worker processed
+type TransactionProcessRecord struct {
+	Workers    int     `json:"workers"`
+	LastBlocks []int64 `json:"lastBlocks"`
+}
