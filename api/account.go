@@ -26,14 +26,14 @@ func GetAccountTxns(ctx *gin.Context) {
 	
 	limit := ctx.DefaultQuery("limit", "20")
 	offset := ctx.DefaultQuery("offset", "0")
-	asc := ctx.DefaultPostForm("asc", "false")
+	asc := ctx.DefaultQuery("asc", "false")
 
 	v, _ := strconv.ParseBool(asc)
 
 	if !v {
-		d.Query(&txns, fmt.Sprintf("select * from txn_tbl where txn_from = '%s' or txn_to = '%s' order by ts limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
-	} else {
 		d.Query(&txns, fmt.Sprintf("select * from txn_tbl where txn_from = '%s' or txn_to = '%s' order by ts desc limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
+	} else {
+		d.Query(&txns, fmt.Sprintf("select * from txn_tbl where txn_from = '%s' or txn_to = '%s' order by ts limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
 	}
 
 	ctx.JSON(http.StatusOK, txns)
