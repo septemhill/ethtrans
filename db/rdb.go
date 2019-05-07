@@ -1,8 +1,9 @@
 package db
 
 import (
-	"github.com/go-pg/pg"
 	"sync"
+
+	"github.com/go-pg/pg"
 )
 
 var ronce sync.Once
