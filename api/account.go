@@ -31,9 +31,9 @@ func GetAccountTxns(ctx *gin.Context) {
 	v, _ := strconv.ParseBool(asc)
 
 	if !v {
-		d.Query(&txns, fmt.Sprintf("select * from txn_tbl where txn_from = '%s' or txn_to = '%s' order by ts desc limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
+		d.Query(&txns, fmt.Sprintf("select * from txn_tbl inner join rpt_tbl on txn_tbl.hash = rpt_tbl.\"transactionHash\" where txn_from = '%s' or txn_to = '%s' order by ts desc limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
 	} else {
-		d.Query(&txns, fmt.Sprintf("select * from txn_tbl where txn_from = '%s' or txn_to = '%s' order by ts limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
+		d.Query(&txns, fmt.Sprintf("select * from txn_tbl inner join rpt_tbl on txn_tbl.hash = rpt_tbl.\"transactionHash\" where txn_from = '%s' or txn_to = '%s' order by ts limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
 	}
 
 	ctx.JSON(http.StatusOK, txns)

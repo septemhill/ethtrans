@@ -4,20 +4,22 @@ import (
 	"time"
 )
 
-//type Receipt struct {
-//	BlockHash         string        `json:"blockHash"`
-//	BlockNumber       string        `json:"blockNumber"`
-//	ContractAddress   string        `json:"contractAddress"`
-//	CumulativeGasUsed string        `json:"cumulativeGasUsed"`
-//	From              string        `json:"from"`
-//	GasUsed           string        `json:"gasUsed"`
-//	Logs              []interface{} `json:"logs"`
-//	LogsBloom         string        `json:"logsBloom"`
-//	Status            string        `json:"status"`
-//	To                string        `json:"to"`
-//	TransactionHash   string        `json:"transactionHash"`
-//	TransactionIndex  string        `json:"transactionIndex"`
-//}
+//Receipt receipt information
+type Receipt struct {
+	tableName         struct{}      `sql:"rpt_tbl"`
+	BlockHash         string        `sql:"blockHash"`
+	BlockNumber       string        `sql:"blockNumber"`
+	ContractAddress   string        `sql:"contractAddress"`
+	CumulativeGasUsed string        `sql:"cumulativeGasUsed"`
+	From              string        `sql:"from"`
+	GasUsed           string        `sql:"gasUsed"`
+	Logs              []interface{} `sql:"logs"`
+	LogsBloom         string        `sql:"logsBloom"`
+	Status            string        `sql:"status"`
+	To                string        `sql:"to"`
+	TransactionHash   string        `sql:"transactionHash"`
+	TransactionIndex  string        `sql:"transactionIndex"`
+}
 
 //Transaction transaction information
 type Transaction struct {
@@ -38,6 +40,7 @@ type Transaction struct {
 	From             string    `sql:"txn_from" json:"from"`
 	Hash             string    `sql:"hash" json:"hash"`
 	Timestamp        time.Time `sql:"ts" json:"timestamp"`
+	Status           string    `sql:"-" json:"status"`
 }
 
 //Block etherenum block information

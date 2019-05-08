@@ -24,6 +24,19 @@ type TxnWorker struct {
 	lastBlocks []int64
 }
 
+func (tw *TxnWorker) getReceipts(txnHash string, rc chan<- types.Receipt) bool {
+	var r *types.Receipt
+	tw.cli.Request("eth_getTransactionReceipt", &r, txnHash)
+
+	if r == nil {
+		return false
+	}
+
+	rc <- *r
+
+	return true
+}
+
 func (tw *TxnWorker) getTransactions(blockNumber int64, tc chan<- types.Transaction) bool {
 	var b *types.Block
 	tw.cli.Request("eth_getBlockByNumber", &b, "0x"+strconv.FormatInt(blockNumber, 16), true)
@@ -42,21 +55,43 @@ func (tw *TxnWorker) getTransactions(blockNumber int64, tc chan<- types.Transact
 	return true
 }
 
+func (tw *TxnWorker) getTransactions2(blockNumber int64, tc chan<- types.Transaction, rc chan<- types.Receipt) bool {
+	var b *types.Block
+	tw.cli.Request("eth_getBlockByNumber", &b, "0x"+strconv.FormatInt(blockNumber, 16), true)
+
+	if b == nil {
+		return false
+	}
+
+	//Set timestamp for transaction
+	for key := range b.Transactions {
+		t, _ := strconv.ParseInt(b.Timestamp, 0, 64)
+		b.Transactions[key].Timestamp = time.Unix(t, 0)
+		tw.getReceipts(b.Transactions[key].Hash, rc)
+		tc <- b.Transactions[key]
+	}
+
+	return true
+}
+
 func (tw *TxnWorker) Start() {
-	worker := func(i int64) <-chan types.Transaction {
+	worker := func(i int64) (<-chan types.Transaction, <-chan types.Receipt) {
 		tc := make(chan types.Transaction)
+		rc := make(chan types.Receipt)
 		tw.wg.Add(1)
 
 		go func(done <-chan struct{}) {
 			defer tw.wg.Done()
 			for {
-				if ok := tw.getTransactions(int64(i), tc); ok {
+				//if ok := tw.getTransactions(int64(i), tc); ok {
+				if ok := tw.getTransactions2(int64(i), tc, rc); ok {
 					i += int64(tw.workerCnt)
 				}
 				select {
 				case <-done:
 					tw.lastBlocks = append(tw.lastBlocks, int64(i))
 					close(tc)
+					close(rc)
 					return
 				default:
 					time.Sleep(time.Millisecond)
@@ -64,56 +99,124 @@ func (tw *TxnWorker) Start() {
 			}
 		}(tw.done)
 
-		return tc
+		return tc, rc
 	}
 
-	merge := func(tcs ...<-chan types.Transaction) <-chan types.Transaction {
+	//merge := func(tcs ...<-chan types.Transaction) <-chan types.Transaction {
+	merge := func(tcs []<-chan types.Transaction, rcs []<-chan types.Receipt) (<-chan types.Transaction, <-chan types.Receipt) {
 		var wg sync.WaitGroup
-		out := make(chan types.Transaction, 100)
+		tout := make(chan types.Transaction, 100)
+		rout := make(chan types.Receipt, 100)
 
 		wg.Add(len(tcs))
+		wg.Add(len(rcs))
 
-		sender := func(c <-chan types.Transaction) {
+		tsender := func(c <-chan types.Transaction) {
 			for n := range c {
-				out <- n
+				tout <- n
 			}
 
 			wg.Done()
 		}
 
+		rsender := func(c <-chan types.Receipt) {
+			for n := range c {
+				rout <- n
+			}
+
+			wg.Done()
+		}
+
+		//		sender := func(tc <-chan types.Transaction, rc <-chan types.Receipt) {
+		//		ENDSENDER:
+		//			for {
+		//				select {
+		//				case t, ok := <-tc:
+		//					if ok {
+		//						tout <- t
+		//					} else {
+		//						tc = nil
+		//					}
+		//				case r, ok := <-rc:
+		//					if ok {
+		//						rout <- r
+		//					} else {
+		//						rc = nil
+		//					}
+		//				}
+		//
+		//				if tc == nil && rc == nil {
+		//					break ENDSENDER
+		//				}
+		//			}
+		//		}
+
 		for _, tc := range tcs {
-			go sender(tc)
+			go tsender(tc)
+		}
+
+		for _, rc := range rcs {
+			go rsender(rc)
 		}
 
 		go func() {
 			wg.Wait()
-			close(out)
+			close(tout)
+			close(rout)
 		}()
 
-		return out
+		return tout, rout
 	}
 
-	wc := make([]<-chan types.Transaction, 0)
+	//wc := make([]<-chan types.Transaction, 0)
+	tc := make([]<-chan types.Transaction, 0)
+	rc := make([]<-chan types.Receipt, 0)
+
 	for i := 0; i < tw.workerCnt; i++ {
-		wc = append(wc, worker(tw.lastBlocks[i]))
-		//wc = append(wc, worker(i))
+		t, r := worker(tw.lastBlocks[i])
+		tc = append(tc, t)
+		rc = append(rc, r)
+		//wc = append(wc, worker(tw.lastBlocks[i]))
 	}
 
 	tw.lastBlocks = make([]int64, 0)
 
-	saveTxns := func(tc <-chan types.Transaction) {
+	saveTxns := func(tc <-chan types.Transaction, rc <-chan types.Receipt) {
 		tw.wg.Add(1)
 		defer tw.wg.Done()
 
 		db := db.GetRDBInstance()
 		defer db.Close()
 
-		for txn := range tc {
-			db.Insert(&txn)
+		//for txn := range tc {
+		//	db.Insert(&txn)
+		//}
+
+	ENDSAVE:
+		for {
+			select {
+			case txn, ok := <-tc:
+				if ok {
+					db.Insert(&txn)
+				} else {
+					tc = nil
+				}
+			case rpt, ok := <-rc:
+				if ok {
+					db.Insert(&rpt)
+				} else {
+					rc = nil
+				}
+			}
+
+			if tc == nil && rc == nil {
+				break ENDSAVE
+			}
 		}
 	}
 
-	go saveTxns(merge(wc...))
+	//go saveTxns(merge(wc...))
+	go saveTxns(merge(tc, rc))
 }
 
 func (tw *TxnWorker) processedRecord() {
@@ -157,16 +260,25 @@ func (tw *TxnWorker) Stop() {
 	tw.cli.Close()
 }
 
+func createRptTable() {
+	db := db.GetRDBInstance()
+
+	if err := db.CreateTable(&types.Receipt{}, &orm.CreateTableOptions{}); err == nil {
+		fmt.Println("create receipt table successful")
+	}
+}
+
 func createTxnTable() {
 	db := db.GetRDBInstance()
 
 	if err := db.CreateTable(&types.Transaction{}, &orm.CreateTableOptions{}); err == nil {
-		fmt.Println("create create successful")
+		fmt.Println("create transaction table successful")
 	}
 }
 
 func NewTxnWorker(startBlock int64, url string, workerCnt int) *TxnWorker {
 	createTxnTable()
+	createRptTable()
 
 	tw := &TxnWorker{
 		//url:  url,
