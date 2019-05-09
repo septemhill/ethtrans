@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
-	"github.com/septemhill/ethacctdb/api"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/septemhill/ethacctdb/api"
 )
 
 const restfulPort = 7210
@@ -32,9 +33,12 @@ func NewRestfulServer() *RestfulServer {
 	router := gin.New()
 	v1Group := router.Group("/v1")
 	accGroup := v1Group.Group("/account")
+	miscGroup := v1Group.Group("/misc")
 
 	accGroup.GET("/txnscnt/:addr", api.GetAccountTotalTxnsCount)
 	accGroup.GET("/txns/:addr", api.GetAccountTxns)
+
+	miscGroup.GET("/hashinfo/:hash", api.GetHashInfo)
 
 	serv := &http.Server{Addr: ":" + strconv.FormatInt(restfulPort, 10), Handler: router}
 

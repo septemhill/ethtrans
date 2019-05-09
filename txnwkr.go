@@ -265,7 +265,13 @@ func createRptTable() {
 
 	if err := db.CreateTable(&types.Receipt{}, &orm.CreateTableOptions{}); err == nil {
 		fmt.Println("create receipt table successful")
+	} else {
+		return
 	}
+
+	db.Model((*types.Receipt)(nil)).Exec(`
+		create index concurrently txnhash_idx on rpt_tbl("transactionHash")
+	`)
 }
 
 func createTxnTable() {
@@ -273,7 +279,13 @@ func createTxnTable() {
 
 	if err := db.CreateTable(&types.Transaction{}, &orm.CreateTableOptions{}); err == nil {
 		fmt.Println("create transaction table successful")
+	} else {
+		return
 	}
+
+	db.Model((*types.Transaction)(nil)).Exec(`
+		create index concurrently hash_idx on txn_tbl(hash)
+	`)
 }
 
 func NewTxnWorker(startBlock int64, url string, workerCnt int) *TxnWorker {

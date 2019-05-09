@@ -7,24 +7,24 @@ import (
 //Receipt receipt information
 type Receipt struct {
 	tableName         struct{}      `sql:"rpt_tbl"`
-	BlockHash         string        `sql:"blockHash"`
-	BlockNumber       string        `sql:"blockNumber"`
-	ContractAddress   string        `sql:"contractAddress"`
-	CumulativeGasUsed string        `sql:"cumulativeGasUsed"`
-	From              string        `sql:"from"`
-	GasUsed           string        `sql:"gasUsed"`
-	Logs              []interface{} `sql:"logs"`
-	LogsBloom         string        `sql:"logsBloom"`
-	Status            string        `sql:"status"`
-	To                string        `sql:"to"`
-	TransactionHash   string        `sql:"transactionHash"`
-	TransactionIndex  string        `sql:"transactionIndex"`
+	BlockHash         string        `sql:"blockHash" json:"blockHash"`
+	BlockNumber       string        `sql:"blockNumber" json:"blockNumber"`
+	ContractAddress   string        `sql:"contractAddress" json:"contractAddress"`
+	CumulativeGasUsed string        `sql:"cumulativeGasUsed" json:"cumulativeGasUsed"`
+	From              string        `sql:"from" json:"from"`
+	GasUsed           string        `sql:"gasUsed" json:"gasUsed"`
+	Logs              []interface{} `sql:"logs" json:"logs"`
+	LogsBloom         string        `sql:"logsBloom" json:"logsBloom"`
+	Status            string        `sql:"status" json:"status"`
+	To                string        `sql:"to" json:"to"`
+	TransactionHash   string        `sql:"transactionHash,pk" json:"transactionHash"`
+	TransactionIndex  string        `sql:"transactionIndex" json:"transactionIndex"`
 }
 
 //Transaction transaction information
 type Transaction struct {
 	tableName        struct{}  `sql:"txn_tbl"`
-	ID               int64     `sql:"id" json:"id"`
+	ID               int64     `sql:"id,pk" json:"id"`
 	BlockNumber      string    `sql:"blocknumber" json:"blockNumber"`
 	Gas              string    `sql:"gas" json:"gas"`
 	Nonce            string    `sql:"nonce" json:"nonce"`
@@ -38,7 +38,7 @@ type Transaction struct {
 	V                string    `sql:"v" json:"v"`
 	BlockHash        string    `sql:"blockhash" json:"blockHash"`
 	From             string    `sql:"txn_from" json:"from"`
-	Hash             string    `sql:"hash" json:"hash"`
+	Hash             string    `sql:"hash,fk" json:"hash"`
 	Timestamp        time.Time `sql:"ts" json:"timestamp"`
 	Status           string    `sql:"-" json:"status"`
 }

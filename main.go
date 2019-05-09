@@ -6,7 +6,6 @@ import (
 )
 
 func main() {
-
 	sm := NewServiceManager()
 	sm.AddServices(
 		NewTxnWorker(0, "http://192.168.0.211:4822", 10),
