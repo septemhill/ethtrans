@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/septemhill/ethacctdb/api"
+	"github.com/septemhill/ethtrans/api"
 )
 
 const restfulPort = 7210

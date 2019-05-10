@@ -1,12 +1,13 @@
-package api 
+package api
 
 import (
 	"fmt"
-	"strconv"
 	"net/http"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
-	"github.com/septemhill/ethacctdb/db"
-	"github.com/septemhill/ethacctdb/types"
+	"github.com/septemhill/ethtrans/db"
+	"github.com/septemhill/ethtrans/types"
 )
 
 const maxTxns = 100
@@ -23,7 +24,7 @@ func GetAccountTotalTxnsCount(ctx *gin.Context) {
 func GetAccountTxns(ctx *gin.Context) {
 	d := db.GetRDBInstance()
 	txns := make([]types.Transaction, 0)
-	
+
 	limit := ctx.DefaultQuery("limit", "20")
 	offset := ctx.DefaultQuery("offset", "0")
 	asc := ctx.DefaultQuery("asc", "false")
@@ -47,7 +48,7 @@ func GetHashInfo(ctx *gin.Context) {
 	if filter == "all" || filter == "txn" {
 		var txn *types.Transaction
 		_, err := d.Query(&txn, fmt.Sprintf("select * from txn_tbl where hash = '%s'", ctx.Param("hash")))
-	
+
 		if err == nil && txn != nil {
 			ctx.JSON(http.StatusOK, txn)
 		}

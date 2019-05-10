@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/go-pg/pg/orm"
-	"github.com/septemhill/ethacctdb/db"
-	"github.com/septemhill/ethacctdb/types"
+	"github.com/septemhill/ethtrans/db"
+	"github.com/septemhill/ethtrans/types"
 )
 
 type TxnWorker struct {

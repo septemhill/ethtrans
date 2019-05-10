@@ -1,4 +1,4 @@
-module ethacctdb
+module ethtrans
 
 require (
 	github.com/aristanetworks/goarista v0.0.0-20190409235741-55bc7be9dd31 // indirect
