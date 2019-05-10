@@ -12,4 +12,5 @@
 *.out
 
 ethacctdb
+ethtrans
 processedData.json
