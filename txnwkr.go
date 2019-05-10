@@ -83,7 +83,6 @@ func (tw *TxnWorker) Start() {
 		go func(done <-chan struct{}) {
 			defer tw.wg.Done()
 			for {
-				//if ok := tw.getTransactions(int64(i), tc); ok {
 				if ok := tw.getTransactions2(int64(i), tc, rc); ok {
 					i += int64(tw.workerCnt)
 				}
@@ -102,7 +101,6 @@ func (tw *TxnWorker) Start() {
 		return tc, rc
 	}
 
-	//merge := func(tcs ...<-chan types.Transaction) <-chan types.Transaction {
 	merge := func(tcs []<-chan types.Transaction, rcs []<-chan types.Receipt) (<-chan types.Transaction, <-chan types.Receipt) {
 		var wg sync.WaitGroup
 		tout := make(chan types.Transaction, 100)
@@ -168,15 +166,13 @@ func (tw *TxnWorker) Start() {
 		return tout, rout
 	}
 
-	//wc := make([]<-chan types.Transaction, 0)
-	tc := make([]<-chan types.Transaction, 0)
-	rc := make([]<-chan types.Receipt, 0)
+	tcs := make([]<-chan types.Transaction, 0)
+	rcs := make([]<-chan types.Receipt, 0)
 
 	for i := 0; i < tw.workerCnt; i++ {
 		t, r := worker(tw.lastBlocks[i])
-		tc = append(tc, t)
-		rc = append(rc, r)
-		//wc = append(wc, worker(tw.lastBlocks[i]))
+		tcs = append(tcs, t)
+		rcs = append(rcs, r)
 	}
 
 	tw.lastBlocks = make([]int64, 0)
@@ -187,10 +183,6 @@ func (tw *TxnWorker) Start() {
 
 		db := db.GetRDBInstance()
 		defer db.Close()
-
-		//for txn := range tc {
-		//	db.Insert(&txn)
-		//}
 
 	ENDSAVE:
 		for {
@@ -215,8 +207,7 @@ func (tw *TxnWorker) Start() {
 		}
 	}
 
-	//go saveTxns(merge(wc...))
-	go saveTxns(merge(tc, rc))
+	go saveTxns(merge(tcs, rcs))
 }
 
 func (tw *TxnWorker) processedRecord() {
