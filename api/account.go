@@ -46,20 +46,20 @@ func GetHashInfo(ctx *gin.Context) {
 	filter := ctx.DefaultQuery("filter", "all")
 
 	if filter == "all" || filter == "txn" {
-		var txn *types.Transaction
+		var txn types.Transaction
 		_, err := d.Query(&txn, fmt.Sprintf("select * from txn_tbl where hash = '%s'", ctx.Param("hash")))
 
-		if err == nil && txn != nil {
+		if err == nil {
 			ctx.JSON(http.StatusOK, txn)
 		}
 		return
 	}
 
 	if filter == "all" || filter == "contract" {
-		var rpt *types.Receipt
+		var rpt types.Receipt
 		_, err := d.Query(&rpt, fmt.Sprintf("select * from rpt_tbl where contractAddress = '%s'", ctx.Param("hash")))
 
-		if err == nil && rpt != nil {
+		if err == nil {
 			ctx.JSON(http.StatusOK, rpt)
 		}
 		return

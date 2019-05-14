@@ -37,25 +37,7 @@ func (tw *TxnWorker) getReceipts(txnHash string, rc chan<- types.Receipt) bool {
 	return true
 }
 
-func (tw *TxnWorker) getTransactions(blockNumber int64, tc chan<- types.Transaction) bool {
-	var b *types.Block
-	tw.cli.Request("eth_getBlockByNumber", &b, "0x"+strconv.FormatInt(blockNumber, 16), true)
-
-	if b == nil {
-		return false
-	}
-
-	//Set timestamp for transaction
-	for key := range b.Transactions {
-		t, _ := strconv.ParseInt(b.Timestamp, 0, 64)
-		b.Transactions[key].Timestamp = time.Unix(t, 0)
-		tc <- b.Transactions[key]
-	}
-
-	return true
-}
-
-func (tw *TxnWorker) getTransactions2(blockNumber int64, tc chan<- types.Transaction, rc chan<- types.Receipt) bool {
+func (tw *TxnWorker) getTransactions(blockNumber int64, tc chan<- types.Transaction, rc chan<- types.Receipt) bool {
 	var b *types.Block
 	tw.cli.Request("eth_getBlockByNumber", &b, "0x"+strconv.FormatInt(blockNumber, 16), true)
 
@@ -83,7 +65,7 @@ func (tw *TxnWorker) Start() {
 		go func(done <-chan struct{}) {
 			defer tw.wg.Done()
 			for {
-				if ok := tw.getTransactions2(int64(i), tc, rc); ok {
+				if ok := tw.getTransactions(int64(i), tc, rc); ok {
 					i += int64(tw.workerCnt)
 				}
 				select {
