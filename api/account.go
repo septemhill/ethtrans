@@ -51,17 +51,17 @@ func GetHashInfo(ctx *gin.Context) {
 
 		if err == nil {
 			ctx.JSON(http.StatusOK, txn)
+			return
 		}
-		return
 	}
 
 	if filter == "all" || filter == "contract" {
 		var rpt types.Receipt
-		_, err := d.Query(&rpt, fmt.Sprintf("select * from rpt_tbl where contractAddress = '%s'", ctx.Param("hash")))
+		_, err := d.Query(&rpt, fmt.Sprintf("select * from rpt_tbl where \"contractAddress\" = '%s'", ctx.Param("hash")))
 
 		if err == nil {
 			ctx.JSON(http.StatusOK, rpt)
+			return
 		}
-		return
 	}
 }
