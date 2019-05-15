@@ -16,7 +16,8 @@ func GetAccountTotalTxnsCount(ctx *gin.Context) {
 	d := db.GetRDBInstance()
 	var cnt int
 
-	d.Query(&cnt, fmt.Sprintf("select count(*) from txn_tbl where txn_from = '%s' or txn_to = '%s'", ctx.Param("addr"), ctx.Param("addr")))
+	//d.Query(&cnt, fmt.Sprintf("select count(*) from txn_tbl where txn_from = '%s' or txn_to = '%s'", ctx.Param("addr"), ctx.Param("addr")))
+	d.Query(&cnt, fmt.Sprintf("select count(*) from txn_tbl where txn_from = '%s' union select count(*) from txn_to = '%s'", ctx.Param("addr"), ctx.Param("addr")))
 
 	ctx.JSON(http.StatusOK, cnt)
 }
