@@ -5,7 +5,7 @@ import (
 	"os/signal"
 )
 
-const priurl = "http://192.168.0.211:4822"
+const priurl = "http://192.168.0.211:4821"
 const puburl = "https://mainnet.infura.io/v3/9fb53ab19227473db75b4aca7c34cf3f"
 
 func main() {

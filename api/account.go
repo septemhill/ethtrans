@@ -16,8 +16,7 @@ func GetAccountTotalTxnsCount(ctx *gin.Context) {
 	d := db.GetRDBInstance()
 	var cnt int
 
-	//d.Query(&cnt, fmt.Sprintf("select count(*) from txn_tbl where txn_from = '%s' or txn_to = '%s'", ctx.Param("addr"), ctx.Param("addr")))
-	d.Query(&cnt, fmt.Sprintf("select count(*) from txn_tbl where txn_from = '%s' union select count(*) from txn_to = '%s'", ctx.Param("addr"), ctx.Param("addr")))
+	d.Query(&cnt, fmt.Sprintf("select count(*) from txn_tbl where txn_from = '%s' union select count(*) from txn_tbl where txn_to = '%s'", ctx.Param("addr"), ctx.Param("addr")))
 
 	ctx.JSON(http.StatusOK, cnt)
 }
@@ -33,9 +32,15 @@ func GetAccountTxns(ctx *gin.Context) {
 	v, _ := strconv.ParseBool(asc)
 
 	if !v {
-		d.Query(&txns, fmt.Sprintf("select txn_tbl.*, rpt_tbl.status from txn_tbl inner join rpt_tbl on txn_tbl.hash = rpt_tbl.\"transactionHash\" where txn_from = '%s' or txn_to = '%s' order by ts desc limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
+		d.Query(&txns, fmt.Sprintf(`select * from
+			((select * from txn_tbl where txn_from = '%s' union select * from txn_tbl where txn_to = '%s') order by ts desc limit %s offset %s) as txn
+			inner join rpt_tbl on txn.hash = rpt_tbl."transactionHash"`, ctx.Param("addr"), ctx.Param("addr"), limit, offset))
+		//d.Query(&txns, fmt.Sprintf("select txn_tbl.*, rpt_tbl.status from txn_tbl inner join rpt_tbl on txn_tbl.hash = rpt_tbl.\"transactionHash\" where txn_from = '%s' or txn_to = '%s' order by ts desc limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
 	} else {
-		d.Query(&txns, fmt.Sprintf("select txn_tbl.*, rpt_tbl.status from txn_tbl inner join rpt_tbl on txn_tbl.hash = rpt_tbl.\"transactionHash\" where txn_from = '%s' or txn_to = '%s' order by ts limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
+		d.Query(&txns, fmt.Sprintf(`select * from
+			((select * from txn_tbl where txn_from = '%s' union select * from txn_tbl where txn_to = '%s') order by ts limit %s offset %s) as txn
+			inner join rpt_tbl on txn.hash = rpt_tbl."transactionHash"`, ctx.Param("addr"), ctx.Param("addr"), limit, offset))
+		//d.Query(&txns, fmt.Sprintf("select txn_tbl.*, rpt_tbl.status from txn_tbl inner join rpt_tbl on txn_tbl.hash = rpt_tbl.\"transactionHash\" where txn_from = '%s' or txn_to = '%s' order by ts limit %s offset %s", ctx.Param("addr"), ctx.Param("addr"), limit, offset))
 	}
 
 	ctx.JSON(http.StatusOK, txns)
